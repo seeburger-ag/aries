@@ -32,17 +32,30 @@
     <artifactId>org.apache.aries.blueprint.core</artifactId>
     <packaging>bundle</packaging>
     <name>Apache Aries Blueprint Core</name>
-    <version>1.7.1</version>
+    <version>1.7.1.SEE1-SNAPSHOT</version>
     <description>
         This bundle contains the core implementation of Blueprint
         along with the "ext" namespace handler.
     </description>
 
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/aries/tags/org.apache.aries.blueprint.core-1.7.1</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/aries/tags/org.apache.aries.blueprint.core-1.7.1</developerConnection>
-        <url>http://svn.apache.org/viewvc/aries/tags/org.apache.aries.blueprint.core-1.7.1</url>
+        <connection>scm:git:git@github.com:seeburger-ag/aries.git</connection>
+        <developerConnection>scm:git:git@github.com:seeburger-ag/aries.git</developerConnection>
     </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>${release.repository.id}</id>
+            <name>Apache Release Distribution Repository</name>
+            <url>${release.repository.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>${snapshot.repository.id}</id>
+            <name>Apache Development Snapshot Repository</name>
+            <url>${snapshot.repository.url}</url>
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <aries.osgi.activator>
@@ -96,7 +109,7 @@
         <proxy.impl.version>1.0.3</proxy.impl.version>
         <quiesce.api.version>1.0.0</quiesce.api.version>
         <util.version>1.0.0</util.version>
-        <lastReleaseVersion>1.6.0</lastReleaseVersion>
+        <lastReleaseVersion>1.7.1</lastReleaseVersion>
     </properties>
 
     <profiles>
@@ -228,12 +241,13 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <plugin>
                 <groupId>org.apache.aries.versioning</groupId>
                 <artifactId>org.apache.aries.versioning.plugin</artifactId>
                 <version>0.3.1</version>
                 <configuration>
+                    <skip>true</skip>
                     <excludes>
                       <exclude>method org.apache.aries.blueprint.di.Repository getRepository() has been deleted</exclude>
                     </excludes>
@@ -272,5 +286,5 @@
             </plugin>
         </plugins>
     </build>
-        
+
 </project>

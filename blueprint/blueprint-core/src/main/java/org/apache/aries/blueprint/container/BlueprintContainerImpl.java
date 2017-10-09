@@ -107,8 +107,8 @@ import org.xml.sax.SAXParseException;
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("deprecation") // due to the deprecated org.apache.aries.blueprint.ExtendedBlueprintContainer
-public class BlueprintContainerImpl 
-    implements ExtendedBlueprintContainer, NamespaceHandlerSet.Listener, 
+public class BlueprintContainerImpl
+    implements ExtendedBlueprintContainer, NamespaceHandlerSet.Listener,
     Runnable, SatisfiableRecipe.SatisfactionListener,
     org.apache.aries.blueprint.ExtendedBlueprintContainer {
 
@@ -118,7 +118,7 @@ public class BlueprintContainerImpl
             BlueprintDomainCombiner.class,
             BlueprintProtectionDomain.class,
     };
-    
+
     public enum State {
         Unknown,
         WaitForNamespaceHandlers,
@@ -185,18 +185,22 @@ public class BlueprintContainerImpl
         this.additionalNamespaces = namespaces;
     }
 
+    @Override
     public ExecutorService getExecutors() {
         return executors;
     }
 
+    @Override
     public Bundle getExtenderBundle() {
         return extenderBundle;
     }
 
+    @Override
     public ProxyManager getProxyManager() {
         return proxyManager;
     }
 
+    @Override
     public <T extends Processor> List<T> getProcessors(Class<T> clazz) {
         List<T> p = new ArrayList<T>();
         for (Processor processor : processors) {
@@ -207,6 +211,7 @@ public class BlueprintContainerImpl
         return p;
     }
 
+    @Override
     public BlueprintListener getEventDispatcher() {
         return eventDispatcher;
     }
@@ -239,6 +244,7 @@ public class BlueprintContainerImpl
         }
     }
 
+    @Override
     public void reload() {
         synchronized (scheduled) {
             if (destroyed.get()) {
@@ -261,7 +267,7 @@ public class BlueprintContainerImpl
             schedule();
         }
     }
-    
+
     protected void resetComponentDefinitionRegistry() {
         this.componentDefinitionRegistry.reset();
         componentDefinitionRegistry.registerComponentDefinition(new PassThroughMetadataImpl("blueprintContainer", this));
@@ -270,6 +276,7 @@ public class BlueprintContainerImpl
         componentDefinitionRegistry.registerComponentDefinition(new PassThroughMetadataImpl("blueprintConverter", converter));
     }
 
+    @Override
     public void run() {
         scheduled.set(false);
         synchronized (scheduled) {
@@ -285,7 +292,9 @@ public class BlueprintContainerImpl
      * This method must be called inside a synchronized block to ensure this method is not run concurrently
      */
     private void doRun() {
+        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
         try {
+            Thread.currentThread().setContextClassLoader(this.getClassLoader());
             for (;;) {
                 if (destroyed.get()) {
                     return;
@@ -359,6 +368,7 @@ public class BlueprintContainerImpl
                         getRepository();
                         trackServiceReferences();
                         Runnable r = new Runnable() {
+                            @Override
                             public void run() {
                                 synchronized (scheduled) {
                                     if (destroyed.get()) {
@@ -403,7 +413,7 @@ public class BlueprintContainerImpl
                                 eventDispatcher.blueprintEvent(new BlueprintEvent(BlueprintEvent.GRACE_PERIOD, getBundle(), getExtenderBundle(), missingDependencies));
                                 return;
                             }
-                        }                       
+                        }
                         state = State.Create;
                         break;
                     case Create:
@@ -434,12 +444,14 @@ public class BlueprintContainerImpl
                 state = State.Failed;
                 cancelFutureIfPresent();
                 tidyupComponents();
-                LOGGER.error("Unable to start blueprint container for bundle {}/{}", getBundle().getSymbolicName(), getBundle().getVersion(), t);
+                LOGGER.error("Unable to start blueprint container for bundle "+getBundle().getSymbolicName()+"/"+getBundle().getVersion(), t);
                 eventDispatcher.blueprintEvent(new BlueprintEvent(BlueprintEvent.FAILURE, getBundle(), getExtenderBundle(), t));
             } catch (RuntimeException re) {
                 LOGGER.debug("Tidying up components failed. ", re);
                 throw re;
             }
+        } finally {
+            Thread.currentThread().setContextClassLoader(oldCl);
         }
     }
 
@@ -447,7 +459,7 @@ public class BlueprintContainerImpl
         List<URL> resources = new ArrayList<URL>();
         for (Object path : pathList) {
             if (path instanceof URL) {
-                resources.add((URL) path);                
+                resources.add((URL) path);
             } else if (path instanceof String) {
                 URL url = bundle.getEntry((String) path);
                 if (url == null) {
@@ -461,16 +473,18 @@ public class BlueprintContainerImpl
         }
         return resources;
     }
-    
+
+    @Override
     public Class loadClass(final String name) throws ClassNotFoundException {
         if (accessControlContext == null) {
             return bundle.loadClass(name);
         } else {
             try {
                 return AccessController.doPrivileged(new PrivilegedExceptionAction<Class>() {
+                    @Override
                     public Class run() throws Exception {
                         return bundle.loadClass(name);
-                    }            
+                    }
                 }, accessControlContext);
             } catch (PrivilegedActionException e) {
                 Exception cause = e.getException();
@@ -487,34 +501,39 @@ public class BlueprintContainerImpl
         return getBundle().adapt(BundleWiring.class).getClassLoader();
     }
 
+    @Override
     public ServiceRegistration registerService(final String[] classes, final Object service, final Dictionary properties) {
         if (accessControlContext == null) {
             return bundleContext.registerService(classes, service, properties);
         } else {
             return AccessController.doPrivileged(new PrivilegedAction<ServiceRegistration>() {
+                @Override
                 public ServiceRegistration run() {
                     return bundleContext.registerService(classes, service, properties);
-                }            
+                }
             }, accessControlContext);
         }
     }
-    
+
+    @Override
     public Object getService(final ServiceReference reference) {
         if (accessControlContext == null) {
             return bundleContext.getService(reference);
         } else {
             return AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
                 public Object run() {
                     return bundleContext.getService(reference);
-                }            
+                }
             }, accessControlContext);
         }
     }
-    
+
+    @Override
     public AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }
-    
+
     public BlueprintRepository getRepository() {
         if (repository == null) {
             repository = new RecipeBuilder(this, tempRecipeIdSpace).createRepository();
@@ -550,12 +569,12 @@ public class BlueprintContainerImpl
         for (BeanMetadata bean : getMetadata(BeanMetadata.class)) {
             if (bean instanceof ExtendedBeanMetadata && !((ExtendedBeanMetadata) bean).isProcessor()) {
                 continue;
-            }     
-            
+            }
+
             Class clazz = null;
             if (bean instanceof ExtendedBeanMetadata) {
                 clazz = ((ExtendedBeanMetadata) bean).getRuntimeClass();
-            }            
+            }
             if (clazz == null && bean.getClassName() != null) {
                 clazz = loadClass(bean.getClassName());
             }
@@ -578,14 +597,14 @@ public class BlueprintContainerImpl
             untrackServiceReferences();
             updateUninstantiatedRecipes();
             getSatisfiableDependenciesMap(true);
-            trackServiceReferences();        
+            trackServiceReferences();
         }
     }
     private void updateUninstantiatedRecipes() {
         Repository tmpRepo = new RecipeBuilder(this, tempRecipeIdSpace).createRepository();
-        
+
         LOGGER.debug("Updating blueprint repository");
-        
+
         for (String name : repository.getNames()) {
             if (repository.getInstance(name) == null) {
                 LOGGER.debug("Removing uninstantiated recipe {}", new Object[] { name });
@@ -594,7 +613,7 @@ public class BlueprintContainerImpl
                 LOGGER.debug("Recipe {} is already instantiated", new Object[] { name });
             }
         }
-        
+
         for (String name : tmpRepo.getNames()) {
             if (repository.getInstance(name) == null) {
                 LOGGER.debug("Adding new recipe {}", new Object[] { name });
@@ -639,7 +658,7 @@ public class BlueprintContainerImpl
         }
         LOGGER.debug("Tracking service references: {}", satisfiables);
     }
-    
+
     private void untrackServiceReferences() {
         Map<String, List<SatisfiableRecipe>> dependencies = getSatisfiableDependenciesMap();
         if (dependencies != null) {
@@ -670,6 +689,7 @@ public class BlueprintContainerImpl
         }
     }
 
+    @Override
     public void notifySatisfaction(SatisfiableRecipe satisfiable) {
         if (destroyed.get()) {
             return;
@@ -782,11 +802,13 @@ public class BlueprintContainerImpl
         }
         return missing.toArray(new String[missing.size()]);
     }
-    
+
+    @Override
     public Set<String> getComponentIds() {
         return new LinkedHashSet<String>(componentDefinitionRegistry.getComponentDefinitionNames());
     }
-    
+
+    @Override
     public Object getComponentInstance(String id) throws NoSuchComponentException {
         if (repository == null || destroyed.get()) {
             throw new NoSuchComponentException(id);
@@ -803,6 +825,7 @@ public class BlueprintContainerImpl
         }
     }
 
+    @Override
     public ComponentMetadata getComponentMetadata(String id) {
         ComponentMetadata metadata = componentDefinitionRegistry.getComponentDefinition(id);
         if (metadata == null) {
@@ -811,6 +834,7 @@ public class BlueprintContainerImpl
         return metadata;
     }
 
+    @Override
     public <T extends ComponentMetadata> Collection<T> getMetadata(Class<T> clazz) {
         Collection<T> metadatas = new ArrayList<T>();
         for (String name : componentDefinitionRegistry.getComponentDefinitionNames()) {
@@ -871,14 +895,17 @@ public class BlueprintContainerImpl
         }
     }
 
+    @Override
     public Converter getConverter() {
         return converter;
     }
-    
+
+    @Override
     public ComponentDefinitionRegistryImpl getComponentDefinitionRegistry() {
         return componentDefinitionRegistry;
     }
-        
+
+    @Override
     public BundleContext getBundleContext() {
         return bundleContext;
     }
@@ -911,7 +938,7 @@ public class BlueprintContainerImpl
         eventDispatcher.blueprintEvent(new BlueprintEvent(BlueprintEvent.DESTROYED, getBundle(), getExtenderBundle()));
         LOGGER.debug("Blueprint container {} destroyed", getBundle().getSymbolicName(), getBundle().getVersion());
     }
-    
+
     protected void quiesce() {
         destroyed.set(true);
         eventDispatcher.blueprintEvent(new BlueprintEvent(BlueprintEvent.DESTROYING, getBundle(), getExtenderBundle()));
@@ -932,12 +959,14 @@ public class BlueprintContainerImpl
       }
     }
 
+    @Override
     public void namespaceHandlerRegistered(URI uri) {
         if (handlerSet != null && handlerSet.getNamespaces().contains(uri)) {
             schedule();
         }
     }
 
+    @Override
     public void namespaceHandlerUnregistered(URI uri) {
         if (handlerSet != null && handlerSet.getNamespaces().contains(uri)) {
             synchronized (scheduled) {
@@ -965,10 +994,11 @@ public class BlueprintContainerImpl
       untrackServiceReferences();
     }
 
-    public void injectBeanInstance(BeanMetadata bmd, Object o) 
+    @Override
+    public void injectBeanInstance(BeanMetadata bmd, Object o)
         throws IllegalArgumentException, ComponentDefinitionException {
-        ExecutionContext origContext 
-            = ExecutionContext.Holder.setContext((ExecutionContext)getRepository());
+        ExecutionContext origContext
+            = ExecutionContext.Holder.setContext(getRepository());
         try {
             ComponentMetadata cmd = componentDefinitionRegistry.getComponentDefinition(bmd.getId());
             if (cmd == null || cmd != bmd) {
@@ -978,7 +1008,7 @@ public class BlueprintContainerImpl
             if (r instanceof BeanRecipe) {
                 BeanRecipe br = (BeanRecipe)r;
                 if (!br.getType().isInstance(o)) {
-                    throw new IllegalArgumentException("Instance class " + o.getClass().getName() 
+                    throw new IllegalArgumentException("Instance class " + o.getClass().getName()
                                                        + " is not an instance of " + br.getClass());
                 }
                 br.setProperties(o);
@@ -998,8 +1028,8 @@ public class BlueprintContainerImpl
         }
         @Override
         public void error(SAXParseException exception) throws SAXException {
-            final String cvctext = exception.getMessage(); 
-            if (cvctext != null && 
+            final String cvctext = exception.getMessage();
+            if (cvctext != null &&
                 (cvctext.startsWith("cvc-datatype-valid.1") || cvctext.startsWith("cvc-attribute.3"))) {
                 return;
             }

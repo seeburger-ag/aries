@@ -18,8 +18,7 @@
  */
 package org.apache.aries.blueprint.namespace;
 
-import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
-import static javax.xml.XMLConstants.XML_NS_URI;
+import static javax.xml.XMLConstants.*;
 import static org.apache.aries.blueprint.parser.Parser.BLUEPRINT_NAMESPACE;
 
 import java.io.Closeable;
@@ -31,15 +30,25 @@ import java.lang.ref.SoftReference;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Source;
@@ -60,7 +69,6 @@ import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
@@ -69,14 +77,14 @@ import org.xml.sax.SAXException;
 
 /**
  * Default implementation of the NamespaceHandlerRegistry.
- * 
+ *
  * This registry will track NamespaceHandler objects in the OSGi registry and make
  * them available, calling listeners when handlers are registered or unregistered.
  *
  * @version $Rev$, $Date$
  */
 public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, ServiceTrackerCustomizer {
-    
+
     public static final String NAMESPACE = "osgi.service.blueprint.namespace";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NamespaceHandlerRegistryImpl.class);
@@ -96,8 +104,7 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
                         new LRUMap<Map<URI, NamespaceHandler>, Reference<Schema>>(10);
 
     // Access to this factory is synchronized on itself
-    private final SchemaFactory schemaFactory =
-                        SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI);
+    private static final SchemaFactory schemaFactory = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI, "__redirected.__SchemaFactory", NamespaceHandlerRegistryImpl.class.getClassLoader());
 
     // Access to this variable is must be synchronized on itself
     private final ArrayList<NamespaceHandlerSetImpl> sets =
@@ -109,6 +116,7 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
         tracker.open();
     }
 
+    @Override
     public Object addingService(ServiceReference reference) {
         LOGGER.debug("Adding NamespaceHandler " + reference.toString());
         NamespaceHandler handler = (NamespaceHandler) bundleContext.getService(reference);
@@ -134,11 +142,13 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
         return handler;
     }
 
+    @Override
     public void modifiedService(ServiceReference reference, Object service) {
         removedService(reference, service);
         addingService(reference);
     }
 
+    @Override
     public void removedService(ServiceReference reference, Object service) {
         try {
             LOGGER.debug("Removing NamespaceHandler " + reference.toString());
@@ -238,7 +248,8 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
                             + NAMESPACE + " property defined which can not be converted to an array of URI");
         }
     }
-    
+
+    @Override
     public NamespaceHandlerSet getNamespaceHandlers(Set<URI> uris, Bundle bundle) {
         NamespaceHandlerSetImpl s;
         synchronized (sets) {
@@ -248,6 +259,7 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
         return s;
     }
 
+    @Override
     public void destroy() {
         tracker.close();
     }
@@ -323,59 +335,75 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             this.source = source;
         }
 
+        @Override
         public Reader getCharacterStream() {
             return null;
         }
 
+        @Override
         public void setCharacterStream(Reader characterStream) {
         }
 
+        @Override
         public InputStream getByteStream() {
             return source.getInputStream();
         }
 
+        @Override
         public void setByteStream(InputStream byteStream) {
         }
 
+        @Override
         public String getStringData() {
             return null;
         }
 
+        @Override
         public void setStringData(String stringData) {
         }
 
+        @Override
         public String getSystemId() {
             return source.getSystemId();
         }
 
+        @Override
         public void setSystemId(String systemId) {
         }
 
+        @Override
         public String getPublicId() {
             return null;
         }
 
+        @Override
         public void setPublicId(String publicId) {
         }
 
+        @Override
         public String getBaseURI() {
             return null;
         }
 
+        @Override
         public void setBaseURI(String baseURI) {
         }
 
+        @Override
         public String getEncoding() {
             return null;
         }
 
+        @Override
         public void setEncoding(String encoding) {
         }
 
+        @Override
         public boolean getCertifiedText() {
             return false;
         }
 
+        @Override
         public void setCertifiedText(boolean certifiedText) {
         }
     }
@@ -419,22 +447,27 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             }
         }
 
+        @Override
         public boolean isComplete() {
             return handlers.size() == namespaces.size();
         }
 
+        @Override
         public Set<URI> getNamespaces() {
             return namespaces;
         }
 
+        @Override
         public NamespaceHandler getNamespaceHandler(URI namespace) {
             return handlers.get(namespace);
         }
 
+        @Override
         public Schema getSchema() throws SAXException, IOException {
             return getSchema(null);
         }
 
+        @Override
         public Schema getSchema(Map<String, String> locations) throws SAXException, IOException {
             if (!isComplete()) {
                 throw new IllegalStateException("NamespaceHandlerSet is not complete");
@@ -632,14 +665,17 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             }
         }
 
+        @Override
         public void addListener(Listener listener) {
             listeners.add(listener);
         }
 
+        @Override
         public void removeListener(Listener listener) {
             listeners.remove(listener);
         }
 
+        @Override
         public void destroy() {
             synchronized (NamespaceHandlerRegistryImpl.this.sets) {
                 NamespaceHandlerRegistryImpl.this.sets.remove(this);
@@ -803,14 +839,17 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
                 this.value = value;
             }
 
+            @Override
             public K getKey() {
                 return key;
             }
 
+            @Override
             public V getValue() {
                 return value;
             }
 
+            @Override
             public V setValue(V value) {
                 throw new UnsupportedOperationException();
             }
@@ -820,6 +859,7 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             this.bound = bound;
         }
 
+        @Override
         public V get(Object key) {
             if (key == null) {
                 throw new NullPointerException();
@@ -834,6 +874,7 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             return null;
         }
 
+        @Override
         public V put(K key, V value) {
             if (key == null) {
                 throw new NullPointerException();
@@ -855,12 +896,15 @@ public class NamespaceHandlerRegistryImpl implements NamespaceHandlerRegistry, S
             return old;
         }
 
+        @Override
         public Set<Entry<K, V>> entrySet() {
             return new AbstractSet<Entry<K,V>>() {
+                @Override
                 public Iterator<Entry<K, V>> iterator() {
                     return entries.iterator();
                 }
 
+                @Override
                 public int size() {
                     return entries.size();
                 }

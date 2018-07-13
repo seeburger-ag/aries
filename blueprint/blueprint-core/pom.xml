@@ -32,7 +32,7 @@
     <artifactId>org.apache.aries.blueprint.core</artifactId>
     <packaging>bundle</packaging>
     <name>Apache Aries Blueprint Core</name>
-    <version>1.7.1.SEE2</version>
+    <version>1.7.2.SEE3-SNAPSHOT</version>
     <description>
         This bundle contains the core implementation of Blueprint
         along with the "ext" namespace handler.
@@ -41,7 +41,7 @@
     <scm>
         <connection>scm:git:git@github.com:seeburger-ag/aries.git</connection>
         <developerConnection>scm:git:git@github.com:seeburger-ag/aries.git</developerConnection>
-      <tag>org.apache.aries.blueprint.core-1.7.1.SEE2</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <distributionManagement>

@@ -69,6 +69,7 @@ public class BlueprintExtender implements BundleActivator, BundleTrackerCustomiz
 
     /** The QuiesceParticipant implementation class name */
     private static final String QUIESCE_PARTICIPANT_CLASS = "org.apache.aries.quiesce.participant.QuiesceParticipant";
+    private static final String EXTENDER_THREADS_PROPERTY = "org.apache.aries.blueprint.extender.threads";
     private static final Logger LOGGER = LoggerFactory.getLogger(BlueprintExtender.class);
 
     private BundleContext context;
@@ -96,7 +97,14 @@ public class BlueprintExtender implements BundleActivator, BundleTrackerCustomiz
         executors = new ScheduledExecutorServiceWrapper(ctx, "Blueprint Extender", new ScheduledExecutorServiceFactory() {
           public ScheduledExecutorService create(String name)
           {
-            return Executors.newScheduledThreadPool(3, new BlueprintThreadFactory(name));
+            int extenderThreads = 10;
+            try {
+                extenderThreads = Integer.parseInt(System.getProperty(EXTENDER_THREADS_PROPERTY, "10"));
+            }
+            catch (Exception e) {
+                LOGGER.error(EXTENDER_THREADS_PROPERTY + " is not a number. Using default value " + extenderThreads + ".");
+            }
+            return Executors.newScheduledThreadPool(extenderThreads, new BlueprintThreadFactory(name));
           }
         });
         eventDispatcher = new BlueprintEventDispatcher(ctx, executors);
